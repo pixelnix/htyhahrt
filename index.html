@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>HTYHAHRT?</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<style type="text/css">
+<!--
+html, body { background-color: #025; color: #fff; }
+a, a:hover, a:active, a:visited { color: #fff; }
+h1 { font-size: 1.0em; }
+h2 { font-size: 4.0em; }
+#theHighlights {
+	margin: 0px auto;
+	max-width: 400px;
+	text-align: left;
+}
+-->
+</style>
+</head>
+<body class="text-center">
+<div class="mt-4">
+	<h1>Have the Yankees Hit a Home Run Today?</h1>
+	<h2 class="mt-4" id='theStatus'>Checking...</h2>
+	<div>
+		<div id="theHighlights"></div>
+	</div>
+</div>
+<script type="text/javascript">
+(function() {
+	
+	async function getStatsApi(uri) {
+		let resp = await fetch('https://statsapi.mlb.com/api/v1/' + uri);
+		let data = await resp.json();
+		return data;
+	}
+	
+	function setTheStatus(status) {
+		document.getElementById("theStatus").innerHTML = status;
+	}
+	
+	function addAHighlightClip(url) {
+		let video = document.createElement("video");
+		video.src = url;
+		document.getElementById("theHighlights").appendChild(video);
+	}
+	function addAHighlightLink(url, title, description) {
+		let link = document.createElement("a");
+		link.innerHTML += "<h5>"+title+"</h5>";
+		link.innerHTML += "<h6>"+description+"</h6>";
+		link.setAttribute("href", url);
+		
+		let div = document.createElement("div");
+		div.appendChild(link);
+		
+		document.getElementById("theHighlights").appendChild(div);
+	}
+	
+	async function init() {
+		let today = (new URLSearchParams(window.location.search)).get("d") || (new Date()).toLocaleDateString();
+		let resp = await getStatsApi('schedule?sportId=1&teamId=147&scheduleType=games&hydrate=game(content(highlights(all)))&date=' + today);
+		console.log('Schedule response:', resp);
+		if (!resp) {
+			setTheStatus('I have no idea.');
+		}
+		else if (resp.totalGames == 0) {
+			setTheStatus("The Yankees don't play today.");
+		}
+		else if (resp.totalGames > 0 && resp.dates.map(d => d.games).filter(gs => gs.filter(g => g.status.statusCode!='S').length>0).length == 0) {
+			setTheStatus("Today's Yankee game hasn't started yet.");
+		}
+		else {
+			let highlights = Array.prototype.concat.apply([],
+				Array.prototype.concat.apply([], resp.dates.map(d => d.games.map(g => g.content.highlights.highlights.items)))
+				);
+			console.log("Found highlights:", highlights);
+			
+			let yankeeHRs = highlights.filter(x => x.keywordsAll.filter(k => k.type=="team_id"&&k.value=="147").length > 0)
+					.filter(x => x.keywordsAll.filter(k => k.type=="taxonomy"&&k.value=="home-run").length > 0);
+			
+			if (yankeeHRs.length == 0) {
+				setTheStatus('Nope.');
+			}
+			else {
+				setTheStatus('YES!');
+				yankeeHRs.map(hr => {
+					//addAHighlightClip(hr.playbacks[0].url);
+					addAHighlightLink(hr.playbacks[0].url, hr.title, hr.description);
+				});
+			}
+		}
+	}
+	
+	init();
+	
+})();
+</script>
+</body>
+</html>
