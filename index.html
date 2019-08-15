@@ -71,7 +71,7 @@ h2 { font-size: 4.0em; }
         else if (resp.totalGames == 0) {
             setTheStatus("The Yankees don't play today.");
         }
-        else if (resp.totalGames > 0 && resp.dates.map(d => d.games).filter(gs => gs.filter(g => g.status.statusCode!='S').length>0).length == 0) {
+        else if (resp.totalGames > 0 && resp.dates.map(d => d.games).filter(gs => gs.filter(g => g.status.statusCode!='S' && g.status.statusCode!='P').length>0).length == 0) {
             setTheStatus("Today's Yankee game hasn't started yet.");
         }
         else {
